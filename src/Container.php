@@ -36,6 +36,7 @@ class Container
     /**
      * Resolve classe e metodo
      * ex Classe@metodo
+     * @throws \RuntimeException
      */
     public function callable(string $classMethod, array $parameters = [])
     {
@@ -63,7 +64,6 @@ class Container
 
     /**
      * Verifica se existe um serviço atrelado a uma classe
-     *
      */
     public function has($id)
     {
@@ -72,7 +72,6 @@ class Container
 
     /**
      * Coleta o serviço atrelado a classe
-     * 
      */
     public function get($id)
     {
@@ -81,7 +80,7 @@ class Container
 
     /**
      * Resolve dependencia em cascata
-     * 
+     * @throws \RuntimeException
      */
     public function make(string|callable $id, array $params = [])
     {
@@ -151,6 +150,7 @@ class Container
     /**
      * @param Dependency $dependency
      * @param ParameterBag $params
+     * @throws \RuntimeException
      */
     public function resolveDependency(Dependency $dependency, ParameterBag $params)
     {
@@ -178,24 +178,15 @@ class Container
         return $constructor !== null && $constructor->getNumberOfParameters() > 0;
     }
 
-    /**
-     * Retorna o valor padrao do parametro caso exista
-     * 
-     * @param \ReflectionParameter $param
-     */
-    private function getDefaultValue(\ReflectionParameter $dependency): mixed
-    {
-        if ($dependency->isOptional()) {
-            return $dependency->getDefaultValue();
-        }
-        return false;
-    }
-
     private function closureParameters(callable $callable): array
     {
         return (new \ReflectionFunction($callable))->getParameters();
     }
 
+    /**
+     * @param string $entity
+     * @return ReflectionParameter[]
+     */
     private function constructorParameters(string $entity): array
     {
         $constructor = (new \ReflectionClass($entity))->getConstructor();

@@ -24,7 +24,7 @@ class Dependency
 
         return false;
     }
-
+    
     public function getTypeHint()
     {
         return $this->type()->getName();
