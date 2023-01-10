@@ -2,6 +2,8 @@
 
 namespace Mialichi;
 
+use ReflectionParameter;
+
 class Container
 {
     /**
@@ -87,24 +89,23 @@ class Container
             return $this->resolveCallable($id, $params);
         }
 
-        if (class_exists($id)) {
-            $reflection = new \ReflectionClass($id);
-
-            if ($this->has($id)) {
-                return $this->get($id)($this);
-            }
-
-            if (!$this->hasParams($id) && $reflection->isInstantiable()) {
-                return new $id;
-            }
-            if (!$reflection->isInstantiable()) {
-                throw new \RuntimeException(sprintf("'%s' nao pode ser instanciada", $id));
-            }
-
-            return $this->resolveInstantiable($id, $params);
+        if (!class_exists($id)) {
+            throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $id));
         }
 
-        throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $id));
+        $reflection = new \ReflectionClass($id);
+        if ($this->has($id)) {
+            return $this->get($id)($this);
+        }
+
+        if (!$this->hasParams($id) && $reflection->isInstantiable()) {
+            return new $id;
+        }
+        if (!$reflection->isInstantiable()) {
+            throw new \RuntimeException(sprintf("'%s' nao pode ser instanciada", $id));
+        }
+
+        return $this->resolveInstantiable($id, $params);
     }
 
     /**
@@ -127,25 +128,36 @@ class Container
         return $callable(...$resolved ?? []);
     }
 
+    /**
+     * @param ReflectionParameter[] $dependencies
+     * @param string[] $params
+     */
     private function resolveDependencyList(array $dependencies, array $params = []): array
     {
         return array_map(
-            function ($dependency) use ($params) {
-                if (array_key_exists($dependency->getName(), $params)) {
-                    return $params[$dependency->getName()];
-                }
-                if (($type = $dependency->getType()) instanceof \ReflectionNamedType) {
-                    if (false !== ($default = $this->getDefaultValue($dependency))) {
-                        return $default;
-                    }
-                    return $this->make($type->getName());
-                }
-
-                throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $dependency->getName()));
+            function (ReflectionParameter $dependency) use ($params) {
+                return $this->resolveDependency($dependency, $params);
             },
             $dependencies
         );
     }
+
+    /**
+     * @param ReflectionParameter $dependency
+     * @param string[] $params
+     */
+    public function resolveDependency(ReflectionParameter $dependency, array $params){
+        if (array_key_exists($name = $dependency->getName(), $params)) {
+            return $params[$name];
+        }
+        if (!($type = $dependency->getType()) instanceof \ReflectionNamedType) {
+            throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $name));
+        }
+        if (false !== ($default = $this->getDefaultValue($dependency))) {
+            return $default;
+        }
+        return $this->make($type->getName());
+    }   
 
     /**
      * Verifica se a classe tem parametros no construtor
