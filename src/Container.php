@@ -114,7 +114,10 @@ class Container
      */
     private function resolveInstantiable(string $id, array $params = [])
     {
-        $resolved = $this->resolveDependencyList($this->constructorParameters($id), $params);
+        $resolved = $this->resolveDependencyList(
+            $this->constructorParameters($id),
+            new ParameterBag($params)
+        );
         return new $id(...$resolved ?? []);
     }
 
@@ -124,40 +127,44 @@ class Container
      */
     private function resolveCallable(callable $callable, array $params = [])
     {
-        $resolved = $this->resolveDependencyList($this->closureParameters($callable), $params);
+        $resolved = $this->resolveDependencyList(
+            $this->closureParameters($callable),
+            new ParameterBag($params)
+        );
         return $callable(...$resolved ?? []);
     }
 
     /**
      * @param ReflectionParameter[] $dependencies
-     * @param string[] $params
+     * @param ParameterBag $params
      */
-    private function resolveDependencyList(array $dependencies, array $params = []): array
+    private function resolveDependencyList(array $dependencies, ParameterBag $params): array
     {
         return array_map(
             function (ReflectionParameter $dependency) use ($params) {
-                return $this->resolveDependency($dependency, $params);
+                return $this->resolveDependency(new Dependency($dependency), $params);
             },
             $dependencies
         );
     }
 
     /**
-     * @param ReflectionParameter $dependency
-     * @param string[] $params
+     * @param Dependency $dependency
+     * @param ParameterBag $params
      */
-    public function resolveDependency(ReflectionParameter $dependency, array $params){
-        if (array_key_exists($name = $dependency->getName(), $params)) {
-            return $params[$name];
+    public function resolveDependency(Dependency $dependency, ParameterBag $params)
+    {
+        if ($params->has($name = $dependency->getName())) {
+            return $params->get($name);
         }
-        if (!($type = $dependency->getType()) instanceof \ReflectionNamedType) {
+        if (!$dependency->isNamedType()) {
             throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $name));
         }
-        if (false !== ($default = $this->getDefaultValue($dependency))) {
-            return $default;
+        if ($dependency->hasDefaultValue()) {
+            return $dependency->getDefaultValue();
         }
-        return $this->make($type->getName());
-    }   
+        return $this->make($dependency->getTypeHint());
+    }
 
     /**
      * Verifica se a classe tem parametros no construtor
