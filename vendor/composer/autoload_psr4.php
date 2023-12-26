@@ -6,5 +6,6 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'Vendor\\Dicontainer\\' => array($baseDir . '/src'),
+    'Tests\\' => array($baseDir . '/Tests'),
+    'DiContainer\\' => array($baseDir . '/src'),
 );

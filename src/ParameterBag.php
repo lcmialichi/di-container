@@ -1,6 +1,6 @@
 <?php
 
-namespace Mialichi;
+namespace DiContainer;
 
 class ParameterBag
 {
@@ -12,7 +12,7 @@ class ParameterBag
     /**
      * @param string $parameterName
      */
-    public function has(string $parameterName)
+    public function has(string $parameterName): bool
     {
         return isset($this->parameters[$parameterName]);
     }
@@ -20,7 +20,7 @@ class ParameterBag
     /**
      * @param string $parameterName
      */
-    public function get(string $parameterName)
+    public function get(string $parameterName): mixed
     {
         return $this->parameters[$parameterName];
     }

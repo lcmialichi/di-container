@@ -1,6 +1,6 @@
 <?php
 
-namespace Mialichi;
+namespace DiContainer;
 
 use ReflectionParameter;
 
@@ -10,14 +10,14 @@ class Container
      * @var array
      */
     private array $container = [];
+
     /**
-     * @var self $intance
+     * @var self $instance
      */
     private static ?self $instance = null;
 
     /**
-     * vincula um callback a uma classe 
-     * 
+     * Binds a callback to a class.
      */
     public function bind(string $id, callable $concrete): void
     {
@@ -25,8 +25,7 @@ class Container
     }
 
     /**
-     * Retorna todos os vinculos dentro do container
-     * 
+     * Returns all bindings within the container.
      */
     public function allBinding(): array
     {
@@ -34,64 +33,66 @@ class Container
     }
 
     /**
-     * Resolve classe e metodo
-     * ex Classe@metodo
+     * Resolves class and method (e.g., Class@method).
      * @throws \RuntimeException
      */
-    public function callable(string $classMethod, array $parameters = [])
+    public function callable (string $classMethod, array $parameters = [])
     {
         $items = explode("@", $classMethod);
         if (count($items) != 2) {
-            throw new \RuntimeException("formato nao suportado pelo container!");
+            throw new \RuntimeException("Format not supported by the container!");
         }
         $callback = ($this->make($items[0]))->{$items[1]}(...);
         return $this->make($callback, $parameters);
     }
 
     /**
-     * Remove um serviço atrelado a uma classe
+     * Removes a service associated with a class.
      */
     public function remove($id): bool
     {
-
         if (isset($this->container[$id])) {
             unset($this->container[$id]);
             return true;
         }
-
         return false;
     }
 
     /**
-     * Verifica se existe um serviço atrelado a uma classe
+     * Checks if there is a service associated with a class.
      */
-    public function has($id)
+    public function has($id): bool
     {
         return isset($this->container[$id]);
     }
 
     /**
-     * Coleta o serviço atrelado a classe
+     * Retrieves the service associated with the class.
      */
-    public function get($id)
+    public function get($id): \Closure
     {
         return $this->container[$id];
     }
 
     /**
-     * Resolve dependencia em cascata
+     * Resolves dependency cascading.
      * @throws \RuntimeException
      */
-    public function make(string|callable $id, array $params = [])
+    public function make(string|callable $id, array $params = []): mixed
     {
         if (is_callable($id)) {
             return $this->resolveCallable($id, $params);
         }
 
-        if (!class_exists($id)) {
-            throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $id));
+        if (class_exists($id)) {
+            return $this->resolveClass($id, $params);
         }
 
+        throw new \RuntimeException(sprintf("'%s' cannot be resolved", $id));
+    }
+
+    private function resolveClass(string $id, array $params = []): mixed
+    {
         $reflection = new \ReflectionClass($id);
         if ($this->has($id)) {
             return $this->get($id)($this);
@@ -100,8 +101,9 @@ class Container
         if (!$this->hasParams($id) && $reflection->isInstantiable()) {
             return new $id;
         }
+
         if (!$reflection->isInstantiable()) {
-            throw new \RuntimeException(sprintf("'%s' nao pode ser instanciada", $id));
+            throw new \RuntimeException(sprintf("'%s' cannot be instantiated", $id));
         }
 
         return $this->resolveInstantiable($id, $params);
@@ -111,7 +113,7 @@ class Container
      * @param string $id
      * @param array $params
      */
-    private function resolveInstantiable(string $id, array $params = [])
+    private function resolveInstantiable(string $id, array $params = []): mixed
     {
         $resolved = $this->resolveDependencyList(
             $this->constructorParameters($id),
@@ -124,7 +126,7 @@ class Container
      * @param Closure $callback
      * @param array $params
      */
-    private function resolveCallable(callable $callable, array $params = [])
+    private function resolveCallable(callable $callable, array $params = []): mixed
     {
         $resolved = $this->resolveDependencyList(
             $this->closureParameters($callable),
@@ -152,13 +154,13 @@ class Container
      * @param ParameterBag $params
      * @throws \RuntimeException
      */
-    public function resolveDependency(Dependency $dependency, ParameterBag $params)
+    public function resolveDependency(Dependency $dependency, ParameterBag $params): mixed
     {
         if ($params->has($name = $dependency->getName())) {
             return $params->get($name);
         }
         if (!$dependency->isNamedType()) {
-            throw new \RuntimeException(sprintf("'%s' nao pode ser resolvido", $name));
+            throw new \RuntimeException(sprintf("'%s' cannot be resolved", $name));
         }
         if ($dependency->hasDefaultValue()) {
             return $dependency->getDefaultValue();
@@ -167,7 +169,7 @@ class Container
     }
 
     /**
-     * Verifica se a classe tem parametros no construtor
+     * Checks if the class has parameters in the constructor.
      * 
      * @param object|string $class
      */
