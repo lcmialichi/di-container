@@ -1,4 +1,4 @@
-# Dependency Injection Test
+# Dependency Injection
 
 This project demonstrates a simple implementation of dependency injection in PHP using a custom Dependency Injection Container (`DiContainer`). The examples include binding classes to callback solutions, creating class instances, and resolving methods with resolvable dependencies.
 
@@ -23,7 +23,9 @@ composer require lcmialichi/dicontainer
 #### `UnresolvableParams` Class
 
 ```php
-    namespace Tests;
+<?php
+
+namespace Tests;
 
 class UnresolvableParams
 {
@@ -44,6 +46,8 @@ class UnresolvableParams
 #### `ResolvableParams` Class
 
 ```php
+<?php
+
 namespace Tests;
 
 class ResolvableParams
